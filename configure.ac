@@ -1,6 +1,11 @@
+dnl autoconf configuration for libexif
+dnl
+dnl Copyright (c) 2001-2022 Lutz Mueller <lutz@users.sourceforge.net>, et. al.
+dnl SPDX-License-Identifier: LGPL-2.0-or-later
+
 AC_PREREQ(2.69)
 AC_INIT([EXIF library],
-        [0.6.24.1],
+        [0.6.26.1],
         [libexif-devel@lists.sourceforge.net],
         [libexif],
         [https://libexif.github.io/])
@@ -37,11 +42,11 @@ dnl Versioning:
 dnl  - CURRENT (Major):  Increment if the interface has changes. AGE is always
 dnl                      *changed* at the same time.
 dnl  - AGE (Micro):      Increment if any interfaces have been added; set to 0
-dnl		         if any interfaces have been removed. Removal has 
+dnl                      if any interfaces have been removed. Removal has 
 dnl                      precedence over adding, so set to 0 if both happened.
 dnl                      It denotes upward compatibility.
 dnl  - REVISION (Minor): Increment any time the source changes; set to 
-dnl			 0 if you incremented CURRENT.
+dnl                      0 if you incremented CURRENT.
 dnl
 dnl  To summarize. Any interface *change* increment CURRENT. If that interface
 dnl  change does not break upward compatibility (ie it is an addition), 
@@ -170,6 +175,52 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 # Check whether libfailmalloc is available for tests
 CHECK_FAILMALLOC
 
+# Add valgrind test rules
+# Unfortunately, the valgrind macros extend the makefile with GNU-specific
+# features, so they can only be included when GNU make is available.
+AC_MSG_CHECKING([for GNU make conditionals])
+cat >conftest-makefile-$$.tmp <<EOF
+all:
+ifeq (1,0)
+	false
+else
+	@true
+endif
+EOF
+if ${MAKE-make} -f conftest-makefile-$$.tmp >/dev/null 2>&1 ; then
+	GNU_MAKE=yes
+	AC_MSG_RESULT([yes])
+else
+	GNU_MAKE=no
+	AC_MSG_RESULT([no])
+fi
+rm -f conftest-makefile-$$.tmp
+
+AC_ARG_ENABLE([possible-valgrind],
+[AS_HELP_STRING([--disable-possible-valgrind],
+                [Whether to allow for the possibility of valgrind tests in the makefile])],
+[POSSIBLE_VALGRIND="${enableval#no}"],
+[POSSIBLE_VALGRIND="${GNU_MAKE#no}"])
+
+# Add support for running tests with valgrind
+AX_VALGRIND_DFLT([helgrind], [off])
+AX_VALGRIND_DFLT([drd], [off])
+AX_VALGRIND_DFLT([sgcheck], [off])
+AX_VALGRIND_CHECK
+
+AC_MSG_CHECKING([if valgrind tests are possible])
+AS_IF([test -n "$POSSIBLE_VALGRIND" && test "$enable_valgrind" = "yes"],
+[AC_MSG_RESULT([yes])],
+[
+	# Don't even provide for the option to enable valgrind. Instead,
+	# clear out the content that would wreck the makefile's portability.
+	# This is needed on e.g. BSD make since it doesn't support ifeq/endif
+	# that AX_VALGRIND_CHECK adds to the makefile.
+	VALGRIND_CHECK_RULES=
+	AM_CONDITIONAL([VALGRIND_ENABLED], [false])
+	AC_MSG_RESULT([no])
+])
+
 # doc support
 GP_CHECK_DOC_DIR
 GP_CHECK_DOXYGEN
@@ -196,7 +247,7 @@ AM_CONDITIONAL([ENABLE_INTERNAL_DOCS],
 # ---------------------------------------------------------------------------
 # i18n support
 # ---------------------------------------------------------------------------
-ALL_LINGUAS="be bs cs da de en_AU en_CA en_GB es fr it ja ms nl pl pt pt_BR ru sk sq sr sv tr uk vi zh_CN"
+ALL_LINGUAS="ar be bs cs da de en_AU en_CA en_GB es fr it ja ka ms nl pl pt pt_BR ro ru sk sq sr sv tr uk vi zh_CN"
 AM_PO_SUBDIRS
 GP_GETTEXT_HACK([${PACKAGE}-${LIBEXIF_CURRENT_MIN}],
                 [Lutz Mueller and others])
@@ -243,6 +294,9 @@ dnl AC_SUBST([AM_CXXFLAGS])
 AC_SUBST([AM_CPPFLAGS])
 AC_SUBST([AM_LDFLAGS])
 
+dnl Not strictly necessary, but helps pulling translations.
+GP_CHECK_PROG([RSYNC], [rsync], [file copying command])
+AM_CONDITIONAL([HAVE_RSYNC], [test "x$RSYNC" != xno])
 
 dnl ---------------------------------------------------------------------------
 dnl Output files

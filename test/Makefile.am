@@ -1,3 +1,6 @@
+# Copyright (C) 2001-2021 Lutz Mueller <lutz@users.sourceforge.net>, et. al.
+# SPDX-License-Identifier: LGPL-2.0-or-later
+
 SUBDIRS = nls
 
 # By default, a few definitions like bindir, srcdir are already set.
@@ -12,6 +15,13 @@ AM_TESTS_ENVIRONMENT += DIFF_U='$(DIFF_U)'; export DIFF_U;
 AM_TESTS_ENVIRONMENT += EXEEXT='$(EXEEXT)'; export EXEEXT;
 AM_TESTS_ENVIRONMENT += FAILMALLOC_PATH='$(FAILMALLOC_PATH)'; export FAILMALLOC_PATH;
 
+# Create the check-valgrind target & skip shell scripts when using it
+@VALGRIND_CHECK_RULES@
+TEST_EXTENSIONS = .sh
+if VALGRIND_ENABLED
+LOG_COMPILER = $(LOG_VALGRIND)
+endif
+
 # Notes about tests:
 #  - Add "small" tests and stuff here.
 #  - Add "big"   tests and stuff to explicitly test for (fixed) bugs
@@ -24,8 +34,8 @@ AM_TESTS_ENVIRONMENT += FAILMALLOC_PATH='$(FAILMALLOC_PATH)'; export FAILMALLOC_
 #      here yet.
 
 TESTS = test-mem test-value test-integers test-parse test-parse-from-data test-tagtable test-sorted \
-	test-fuzzer test-null parse-regression.sh swap-byte-order.sh \
-	extract-parse.sh test-gps
+	test-fuzzer test-null test-gps parse-regression.sh swap-byte-order.sh \
+	extract-parse.sh check-mnote.sh
 
 TESTS += check-failmalloc.sh
 
@@ -39,6 +49,7 @@ EXTRA_DIST = \
 	parse-regression.sh \
 	swap-byte-order.sh \
 	extract-parse.sh \
+	check-mnote.sh \
 	check-failmalloc.sh \
 	testdata/canon_makernote_variant_1.jpg \
 	testdata/canon_makernote_variant_1.jpg.parsed \

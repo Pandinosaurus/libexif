@@ -18,6 +18,8 @@
  * License along with this library; if not, write to the
  * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA  02110-1301  USA.
+ *
+ * SPDX-License-Identifier: LGPL-2.0-or-later
  */
 
 #ifndef LIBEXIF_EXIF_UTILS_H
@@ -168,7 +170,7 @@ void exif_set_srational (unsigned char *b, ExifByteOrder order,
 			 ExifSRational value);
 
 /*! \internal */
-void exif_convert_utf16_to_utf8 (char *out, const unsigned char *in, int maxlen);
+void exif_convert_utf16_to_utf8 (char *out, unsigned int outlen, const unsigned char *in, unsigned int inlen);
 
 /* Please do not use this function outside of the library. */
 

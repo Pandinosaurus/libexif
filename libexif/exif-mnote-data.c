@@ -16,6 +16,8 @@
  * License along with this library; if not, write to the
  * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA  02110-1301  USA.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
 #include <config.h>
@@ -37,7 +39,10 @@ exif_mnote_data_construct (ExifMnoteData *d, ExifMem *mem)
 	if (!d || !mem) return;
 	if (d->priv) return;
 	d->priv = exif_mem_alloc (mem, sizeof (ExifMnoteDataPriv));
-	if (!d->priv) return;
+	if (!d->priv) {
+		EXIF_LOG_NO_MEMORY (d->log, "ExifMnoteData", sizeof (ExifMnoteDataPriv));
+		return;
+	}
 
 	d->priv->ref_count = 1;
 

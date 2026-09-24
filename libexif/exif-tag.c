@@ -16,6 +16,8 @@
  * License along with this library; if not, write to the
  * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA  02110-1301  USA.
+ *
+ * SPDX-License-Identifier: LGPL-2.0-or-later
  */
 
 #include <config.h>
@@ -439,6 +441,8 @@ static const struct TagEntry {
 	/* Not in EXIF 2.2 */
 	{EXIF_TAG_RELATED_IMAGE_LENGTH, "RelatedImageLength",
 	 "RelatedImageLength", "", ESL_UNKNOWN},
+	{EXIF_TAG_IMAGE_DEPTH, "ImageDepth",
+	 "ImageDepth", "", ESL_UNKNOWN},
 	/* Not in EXIF 2.2 */
 	{EXIF_TAG_CFA_REPEAT_PATTERN_DIM, "CFARepeatPatternDim",
 	 "CFARepeatPatternDim", "", ESL_UNKNOWN},
@@ -484,7 +488,7 @@ static const struct TagEntry {
 	/* Not in EXIF 2.2 */
 	{EXIF_TAG_IMAGE_RESOURCES, "ImageResources", N_("Image Resources Block"), "",
 	 ESL_UNKNOWN},
-	{EXIF_TAG_EXIF_IFD_POINTER, "ExifIfdPointer", "ExifIFDPointer",
+	{EXIF_TAG_EXIF_IFD_POINTER, "ExifIfdPointer", N_("Exif IFD Pointer"),
 	 N_("A pointer to the Exif IFD. Interoperability, Exif IFD has the "
 	    "same structure as that of the IFD specified in TIFF. "
 	    "ordinarily, however, it does not contain image data as in "
@@ -1011,7 +1015,7 @@ static int
 exif_tag_table_first(ExifTag tag)
 {
 	int i;
-	struct TagEntry *entry = bsearch(&tag, ExifTagTable,
+	const struct TagEntry *entry = bsearch(&tag, ExifTagTable,
 		exif_tag_table_count()-1, sizeof(struct TagEntry), match_tag);
 	if (!entry)
 		return -1;	/* Not found */

@@ -17,6 +17,8 @@
  * License along with this library; if not, write to the
  * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA  02110-1301  USA.
+ *
+ * SPDX-License-Identifier: LGPL-2.0-or-later
  */
 
 #include <config.h>
@@ -68,6 +70,8 @@ exif_mnote_data_canon_get_tags (ExifMnoteDataCanon *dc, unsigned int n,
 		unsigned int *m, unsigned int *s)
 {
 	unsigned int from = 0, to;
+
+	if (s) *s = 0;
 
 	if (!dc || !m) return;
 	for (*m = 0; *m < dc->count; (*m)++) {
@@ -209,7 +213,9 @@ exif_mnote_data_canon_load (ExifMnoteData *ne,
 	size_t i, tcount, o, datao;
 	long failsafe_size = 0;
 
-	if (!n || !buf || !buf_size) {
+	if (!n) return;
+
+	if (!buf || !buf_size) {
 		exif_log (ne->log, EXIF_LOG_CODE_CORRUPT_DATA,
 			  "ExifMnoteCanon", "Short MakerNote");
 		return;

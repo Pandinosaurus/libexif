@@ -16,6 +16,8 @@
  * License along with this library; if not, write to the
  * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA  02110-1301  USA.
+ *
+ * SPDX-License-Identifier: LGPL-2.0-or-later
  */
 
 #include <config.h>
@@ -76,7 +78,7 @@ exif_mnote_data_olympus_get_value (ExifMnoteData *d, unsigned int i, char *val, 
 	ExifMnoteDataOlympus *n = (ExifMnoteDataOlympus *) d;
 
 	if (!d || !val) return NULL;
-	if (i > n->count -1) return NULL;
+	if (i >= n->count) return NULL;
 /*
 	exif_log (d->log, EXIF_LOG_CODE_DEBUG, "ExifMnoteDataOlympus",
 		  "Querying value for tag '%s'...",
@@ -168,7 +170,7 @@ exif_mnote_data_olympus_save (ExifMnoteData *ne,
 
 		/* Write the header and the number of entries. */
 		strcpy ((char *)*buf, "Nikon");
-		(*buf)[6] = n->version;
+		(*buf)[6] = (unsigned char)n->version;
 
 		if (n->version != nikonV1) {
 			exif_set_short (*buf + 10, n->order, (ExifShort) (
@@ -242,7 +244,9 @@ exif_mnote_data_olympus_load (ExifMnoteData *en,
 	ExifShort c;
 	size_t i, tcount, o, o2, datao = 6, base = 0;
 
-	if (!n || !buf || !buf_size) {
+	if (!n) return;
+
+	if (!buf || !buf_size) {
 		exif_log (en->log, EXIF_LOG_CODE_CORRUPT_DATA,
 			  "ExifMnoteDataOlympus", "Short MakerNote");
 		return;
@@ -382,6 +386,7 @@ exif_mnote_data_olympus_load (ExifMnoteData *en,
 		o2 += 2;
 
 		/* Go to where the number of entries is. */
+		if (CHECKOVERFLOW(o2,buf_size,exif_get_long (buf + o2, n->order))) return;
 		o2 = datao + exif_get_long (buf + o2, n->order);
 		break;
 

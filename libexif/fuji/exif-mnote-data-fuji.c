@@ -16,6 +16,8 @@
  * License along with this library; if not, write to the
  * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA  02110-1301  USA.
+ *
+ * SPDX-License-Identifier: LGPL-2.0-or-later
  */
 
 #include <stdlib.h>
@@ -68,7 +70,7 @@ exif_mnote_data_fuji_get_value (ExifMnoteData *d, unsigned int i, char *val, uns
 	ExifMnoteDataFuji *n = (ExifMnoteDataFuji *) d;
 
 	if (!d || !val) return NULL;
-	if (i > n->count -1) return NULL;
+	if (i >= n->count) return NULL;
 /*
 	exif_log (d->log, EXIF_LOG_CODE_DEBUG, "ExifMnoteDataFuji",
 		  "Querying value for tag '%s'...",
@@ -95,6 +97,7 @@ exif_mnote_data_fuji_save (ExifMnoteData *ne, unsigned char **buf,
 	*buf_size = 8 + 4 + 2 + n->count * 12 + 4;
 	*buf = exif_mem_alloc (ne->mem, *buf_size);
 	if (!*buf) {
+		EXIF_LOG_NO_MEMORY (ne->log, "ExifMnoteDataFuji", *buf_size);
 		*buf_size = 0;
 		return;
 	}
@@ -131,6 +134,7 @@ exif_mnote_data_fuji_save (ExifMnoteData *ne, unsigned char **buf,
 			if (s & 1) ts += 1;
 			t = exif_mem_realloc (ne->mem, *buf, ts);
 			if (!t) {
+				EXIF_LOG_NO_MEMORY (ne->log, "ExifMnoteDataFuji", ts);
 				return;
 			}
 			*buf = t;
@@ -158,7 +162,9 @@ exif_mnote_data_fuji_load (ExifMnoteData *en,
 	ExifLong c;
 	size_t i, tcount, o, datao;
 
-	if (!n || !buf || !buf_size) {
+	if (!n) return;
+
+	if (!buf || !buf_size) {
 		exif_log (en->log, EXIF_LOG_CODE_CORRUPT_DATA,
 			  "ExifMnoteDataFuji", "Short MakerNote");
 		return;

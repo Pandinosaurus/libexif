@@ -16,6 +16,8 @@
  * License along with this library; if not, write to the
  * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA  02110-1301  USA.
+ *
+ * SPDX-License-Identifier: LGPL-2.0-or-later
  */
 
 #include <config.h>
@@ -68,6 +70,8 @@ struct _ExifDataPrivate
 
 	ExifDataOption options;
 	ExifDataType data_type;
+
+	unsigned int ifd_used[EXIF_IFD_COUNT];
 };
 
 static void *
@@ -166,6 +170,7 @@ exif_data_load_data_entry (ExifData *data, ExifEntry *entry,
 			   unsigned int size, unsigned int offset)
 {
 	unsigned int s, doff;
+	unsigned char formatsize;
 
 	entry->tag        = exif_get_short (d + offset + 0, data->priv->order);
 	entry->format     = exif_get_short (d + offset + 2, data->priv->order);
@@ -180,8 +185,13 @@ exif_data_load_data_entry (ExifData *data, ExifEntry *entry,
 
 	/* {0,1,2,4,8} x { 0x00000000 .. 0xffffffff } 
 	 *   -> { 0x000000000 .. 0x7fffffff8 } */
-	s = exif_format_get_size(entry->format) * entry->components;
-	if ((s < entry->components) || (s == 0)){
+
+	formatsize = exif_format_get_size(entry->format);
+	if (!formatsize || (entry->components >= (0xffffffff / formatsize)))
+		return 0;
+
+	s = formatsize * entry->components;
+	if ((s < entry->components) || (s == 0)) {
 		return 0;
 	}
 
@@ -281,6 +291,11 @@ exif_data_save_data_entry (ExifData *data, ExifEntry *e,
 	 * Size? If bigger than 4 bytes, the actual data is not in
 	 * the entry but somewhere else.
 	 */
+	/* we usually have only 64kb datablock, so add a safety bound to avoid overflows */
+	if (e->components > 65536) {
+		exif_log (data->priv->log, EXIF_LOG_CODE_CORRUPT_DATA, "ExifData", _("Overflow in components detected."));
+		return;
+	}
 	s = exif_format_get_size (e->format) * e->components;
 	if (s > 4) {
 		unsigned char *t;
@@ -361,6 +376,16 @@ if (data->ifd[(i)]->count) {				\
 		"Skipping...",				\
 		exif_ifd_get_name (i));			\
 	break;						\
+}							\
+if (data->priv->ifd_used[i]) {				\
+	exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG,	\
+		"ExifData", "Attempt to load IFD "	\
+		"'%s' multiple times detected. "	\
+		"Skipping...",				\
+		exif_ifd_get_name (i));			\
+	break;						\
+} else {						\
+	data->priv->ifd_used[i] = 1;			\
 }
 
 /*! Calculate the recursion cost added by one level of IFD loading.
@@ -454,7 +479,9 @@ exif_data_load_data_content (ExifData *data, ExifIfd ifd,
 			if (o >= ds) {
 				exif_log (data->priv->log, EXIF_LOG_CODE_CORRUPT_DATA, "ExifData",
 					  "Tag data past end of buffer (%u > %u)", offset+2, ds);
-				return;
+				if (recursion_cost > 0)
+					return;
+				break;
 			}
 			/* FIXME: IFD_POINTER tags aren't marked as being in a
 			 * specific IFD, so exif_tag_get_name_in_ifd won't work
@@ -464,17 +491,17 @@ exif_data_load_data_content (ExifData *data, ExifIfd ifd,
 				  exif_tag_get_name(tag), o);
 			switch (tag) {
 			case EXIF_TAG_EXIF_IFD_POINTER:
-				CHECK_REC (EXIF_IFD_EXIF);
+				CHECK_REC (EXIF_IFD_EXIF)
 				exif_data_load_data_content (data, EXIF_IFD_EXIF, d, ds, o,
 					recursion_cost + level_cost(n));
 				break;
 			case EXIF_TAG_GPS_INFO_IFD_POINTER:
-				CHECK_REC (EXIF_IFD_GPS);
+				CHECK_REC (EXIF_IFD_GPS)
 				exif_data_load_data_content (data, EXIF_IFD_GPS, d, ds, o,
 					recursion_cost + level_cost(n));
 				break;
 			case EXIF_TAG_INTEROPERABILITY_IFD_POINTER:
-				CHECK_REC (EXIF_IFD_INTEROPERABILITY);
+				CHECK_REC (EXIF_IFD_INTEROPERABILITY)
 				exif_data_load_data_content (data, EXIF_IFD_INTEROPERABILITY, d, ds, o,
 					recursion_cost + level_cost(n));
 				break;
@@ -841,7 +868,7 @@ interpret_maker_note(ExifData *data, const unsigned char *d, unsigned int ds)
 
 #define LOG_TOO_SMALL \
 exif_log (data->priv->log, EXIF_LOG_CODE_CORRUPT_DATA, "ExifData", \
-		_("Size of data too small to allow for EXIF data."));
+		_("Size of data too small to allow for EXIF data."))
 
 void
 exif_data_load_data (ExifData *data, const unsigned char *d_orig,
@@ -1330,8 +1357,8 @@ fix_func (ExifContent *c, void *UNUSED(data))
 				if (cnt == c->count) {
 					/* safety net */
 					exif_log (c->parent->priv->log, EXIF_LOG_CODE_DEBUG, "exif-data",
-					"failed to remove last entry from entries.");
-					c->count--;
+						  "failed to remove entry from entries.");
+					break;
 				}
 			}
 		}

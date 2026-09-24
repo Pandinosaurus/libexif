@@ -16,6 +16,8 @@
  * License along with this library; if not, write to the
  * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA  02110-1301  USA.
+ *
+ * SPDX-License-Identifier: LGPL-2.0-or-later
  */
 
 #include <config.h>
@@ -28,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stddef.h>
 
 #undef JPEG_MARKER_DCT
 #define JPEG_MARKER_DCT  0xc0
@@ -43,10 +46,14 @@
 #define JPEG_MARKER_APP1 0xe1
 #undef JPEG_MARKER_APP2
 #define JPEG_MARKER_APP2 0xe2
+#undef JPEG_MARKER_APP3
+#define JPEG_MARKER_APP3 0xe3
 #undef JPEG_MARKER_APP4
 #define JPEG_MARKER_APP4 0xe4
 #undef JPEG_MARKER_APP5
 #define JPEG_MARKER_APP5 0xe5
+#undef JPEG_MARKER_APP10
+#define JPEG_MARKER_APP10 0xea
 #undef JPEG_MARKER_APP11
 #define JPEG_MARKER_APP11 0xeb
 #undef JPEG_MARKER_APP13
@@ -302,7 +309,7 @@ begin:
 		default:
 			switch (eld->b[i]) {
 			case JPEG_MARKER_APP1:
-			  if (!memcmp (eld->b + i + 3, ExifHeader, MIN((ssize_t)(sizeof(ExifHeader)), MAX(0, ((ssize_t)(sizeof(eld->b))) - ((ssize_t)i) - 3)))) {
+			  if (!memcmp (eld->b + i + 3, ExifHeader, MIN((ptrdiff_t)(sizeof(ExifHeader)), MAX(0, ((ptrdiff_t)(sizeof(eld->b))) - ((ptrdiff_t)i) - 3)))) {
 					eld->data_format = EL_DATA_FORMAT_EXIF;
 				} else {
 					eld->data_format = EL_DATA_FORMAT_JPEG; /* Probably JFIF - keep searching for APP1 EXIF*/
@@ -315,8 +322,10 @@ begin:
 			case JPEG_MARKER_DQT:
 			case JPEG_MARKER_APP0:
 			case JPEG_MARKER_APP2:
+			case JPEG_MARKER_APP3:
 			case JPEG_MARKER_APP4:
 			case JPEG_MARKER_APP5:
+			case JPEG_MARKER_APP10:
 			case JPEG_MARKER_APP11:
 			case JPEG_MARKER_APP13:
 			case JPEG_MARKER_APP14:
@@ -333,7 +342,7 @@ begin:
 					EXIF_LOG_CODE_CORRUPT_DATA,
 					"ExifLoader", _("The data supplied "
 						"does not seem to contain "
-						"EXIF data."));
+						"EXIF data. JPEG Marker type 0x%02x"), eld->b[i]);
 				exif_loader_reset (eld);
 				return 0;
 			}

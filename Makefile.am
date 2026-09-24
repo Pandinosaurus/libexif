@@ -1,3 +1,8 @@
+# Root automake makefile for libexif
+#
+# Copyright (c) 2001-2020 Lutz Mueller <lutz@users.sourceforge.net>, et. al.
+# SPDX-License-Identifier: LGPL-2.0-or-later
+
 SUBDIRS = m4m po libexif test doc binary-dist contrib
 
 EXTRA_DIST = @PACKAGE_TARNAME@.spec README-Win32.txt
@@ -42,5 +47,16 @@ git-tag-release:
 	echo "Press Ctrl-C to abort, Enter to continue."; \
 	read; \
 	cd "$(srcdir)" && git tag "$${tag}"
+
+.PHONY: pull-translations
+if HAVE_RSYNC
+pull-translations:
+	$(RSYNC) -Lrtvz translationproject.org::tp/latest/libexif/ $(top_srcdir)/po
+else
+pull-translations:
+	echo "Error: Cannot pull translations: Could not find rsync at configure time."
+	exit 1
+endif
+
 
 # End of Makefile.am.
